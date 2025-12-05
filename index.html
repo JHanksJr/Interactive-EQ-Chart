@@ -1,0 +1,596 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Audio Mixing EQ Frequency Chart</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Arial', sans-serif;
+            background: linear-gradient(135deg, #0a0a0a 0%, #1a1a1a 100%);
+            color: #ffffff;
+            padding: 20px;
+            min-height: 100vh;
+        }
+        
+        .container {
+            max-width: 1600px;
+            margin: 0 auto;
+        }
+        
+        h1 {
+            text-align: center;
+            margin-bottom: 10px;
+            font-size: 2.5em;
+            color: #667eea;
+        }
+        
+        .subtitle {
+            text-align: center;
+            color: #aaa;
+            margin-bottom: 40px;
+            font-size: 1.1em;
+        }
+        
+        .eq-interface {
+            background: #1a1a1a;
+            border-radius: 20px;
+            padding: 40px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.8);
+            margin-bottom: 30px;
+            border: 2px solid #2a2a2a;
+        }
+        
+        .eq-display {
+            background: #0d0d0d;
+            border-radius: 15px;
+            padding: 30px 20px;
+            position: relative;
+            overflow: hidden;
+            border: 1px solid #333;
+        }
+        
+        .spectrum-container {
+            position: relative;
+            height: 500px;
+            display: flex;
+            align-items: flex-end;
+            gap: 0;
+        }
+        
+        .frequency-band {
+            flex: 1;
+            position: relative;
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+            justify-content: flex-start;
+            padding: 20px 10px;
+            transition: all 0.3s ease;
+            cursor: pointer;
+            border-left: 1px solid rgba(255, 255, 255, 0.05);
+        }
+        
+        .frequency-band:first-child {
+            border-left: none;
+        }
+        
+        .frequency-band:hover {
+            filter: brightness(1.2);
+        }
+        
+        .frequency-band:hover .band-fill {
+            height: 95% !important;
+        }
+        
+        .band-fill {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            transition: height 0.3s ease;
+            opacity: 0.4;
+            border-top-left-radius: 8px;
+            border-top-right-radius: 8px;
+        }
+        
+        .band-content {
+            position: relative;
+            z-index: 2;
+            display: flex;
+            flex-direction: column;
+            height: 100%;
+        }
+        
+        .band-header {
+            text-align: center;
+            margin-bottom: 15px;
+        }
+        
+        .band-name {
+            font-weight: bold;
+            font-size: 0.95em;
+            margin-bottom: 5px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            text-shadow: 0 2px 4px rgba(0, 0, 0, 0.5);
+        }
+        
+        .band-range {
+            font-size: 0.75em;
+            opacity: 0.9;
+            font-weight: 600;
+            text-shadow: 0 2px 4px rgba(0, 0, 0, 0.5);
+        }
+        
+        .instruments {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            margin-top: 10px;
+            flex: 1;
+            overflow-y: auto;
+        }
+        
+        .instrument {
+            background: rgba(0, 0, 0, 0.6);
+            padding: 10px 8px;
+            border-radius: 6px;
+            text-align: center;
+            font-size: 0.8em;
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            transition: all 0.2s ease;
+            line-height: 1.3;
+        }
+        
+        .instrument:hover {
+            transform: translateY(-2px);
+            background: rgba(0, 0, 0, 0.8);
+            border-color: rgba(255, 255, 255, 0.3);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5);
+        }
+        
+        /* Color coding for each frequency band */
+        .sub-bass .band-fill {
+            background: linear-gradient(180deg, #8b5cf6 0%, #4a0e4e 100%);
+        }
+        .sub-bass .band-name,
+        .sub-bass .band-range {
+            color: #c4b5fd;
+        }
+        
+        .bass .band-fill {
+            background: linear-gradient(180deg, #3b82f6 0%, #1e3a8a 100%);
+        }
+        .bass .band-name,
+        .bass .band-range {
+            color: #93c5fd;
+        }
+        
+        .low-mids .band-fill {
+            background: linear-gradient(180deg, #10b981 0%, #15803d 100%);
+        }
+        .low-mids .band-name,
+        .low-mids .band-range {
+            color: #6ee7b7;
+        }
+        
+        .mids .band-fill {
+            background: linear-gradient(180deg, #f59e0b 0%, #ca8a04 100%);
+        }
+        .mids .band-name,
+        .mids .band-range {
+            color: #fcd34d;
+        }
+        
+        .high-mids .band-fill {
+            background: linear-gradient(180deg, #ef4444 0%, #dc2626 100%);
+        }
+        .high-mids .band-name,
+        .high-mids .band-range {
+            color: #fca5a5;
+        }
+        
+        .presence .band-fill {
+            background: linear-gradient(180deg, #f97316 0%, #ea580c 100%);
+        }
+        .presence .band-name,
+        .presence .band-range {
+            color: #fdba74;
+        }
+        
+        .brilliance .band-fill {
+            background: linear-gradient(180deg, #ec4899 0%, #db2777 100%);
+        }
+        .brilliance .band-name,
+        .brilliance .band-range {
+            color: #f9a8d4;
+        }
+        
+        /* Frequency axis */
+        .frequency-axis {
+            display: flex;
+            justify-content: space-between;
+            margin-top: 15px;
+            padding: 10px 20px;
+            border-top: 2px solid #333;
+            font-size: 0.85em;
+            color: #888;
+        }
+        
+        .freq-marker {
+            text-align: center;
+            font-weight: 600;
+        }
+        
+        /* Grid lines */
+        .grid-lines {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            pointer-events: none;
+        }
+        
+        .grid-line {
+            position: absolute;
+            left: 0;
+            right: 0;
+            height: 1px;
+            background: rgba(255, 255, 255, 0.03);
+        }
+        
+        .legend {
+            background: #1a1a1a;
+            border-radius: 15px;
+            padding: 30px;
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.5);
+            border: 2px solid #2a2a2a;
+        }
+        
+        .legend h2 {
+            margin-bottom: 20px;
+            color: #667eea;
+        }
+        
+        .legend-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 15px;
+        }
+        
+        .legend-item {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            padding: 15px;
+            background: rgba(255, 255, 255, 0.03);
+            border-radius: 8px;
+            border: 1px solid rgba(255, 255, 255, 0.05);
+        }
+        
+        .legend-color {
+            width: 50px;
+            height: 50px;
+            border-radius: 8px;
+            flex-shrink: 0;
+        }
+        
+        .legend-text h3 {
+            margin-bottom: 5px;
+            font-size: 1em;
+        }
+        
+        .legend-text p {
+            font-size: 0.85em;
+            opacity: 0.8;
+            line-height: 1.4;
+        }
+        
+        .tips {
+            background: #1a1a1a;
+            border-radius: 15px;
+            padding: 30px;
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.5);
+            margin-top: 30px;
+            border: 2px solid #2a2a2a;
+        }
+        
+        .tips h2 {
+            margin-bottom: 15px;
+            color: #667eea;
+        }
+        
+        .tips ul {
+            list-style: none;
+            padding-left: 0;
+        }
+        
+        .tips li {
+            padding: 10px 0;
+            padding-left: 25px;
+            position: relative;
+        }
+        
+        .tips li:before {
+            content: "▸";
+            position: absolute;
+            left: 0;
+            color: #667eea;
+        }
+        
+        @media (max-width: 1200px) {
+            .spectrum-container {
+                height: 700px;
+            }
+            
+            .instrument {
+                font-size: 0.75em;
+                padding: 8px 6px;
+            }
+        }
+        
+        @media (max-width: 768px) {
+            .spectrum-container {
+                height: 600px;
+            }
+            
+            .band-name {
+                font-size: 0.8em;
+            }
+            
+            .band-range {
+                font-size: 0.7em;
+            }
+            
+            .instrument {
+                font-size: 0.7em;
+                padding: 6px 4px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Audio Mixing EQ Frequency Chart</h1>
+        <p class="subtitle">A visual reference guide for mixing engineers and students</p>
+        
+        <div class="eq-interface">
+            <div class="eq-display">
+                <div class="grid-lines">
+                    <div class="grid-line" style="top: 20%;"></div>
+                    <div class="grid-line" style="top: 40%;"></div>
+                    <div class="grid-line" style="top: 60%;"></div>
+                    <div class="grid-line" style="top: 80%;"></div>
+                </div>
+                
+                <div class="spectrum-container">
+                    <!-- Sub-Bass -->
+                    <div class="frequency-band sub-bass">
+                        <div class="band-fill" style="height: 70%;"></div>
+                        <div class="band-content">
+                            <div class="band-header">
+                                <div class="band-name">Sub-Bass</div>
+                                <div class="band-range">20-60 Hz</div>
+                            </div>
+                            <div class="instruments">
+                                <div class="instrument">Kick Drum (fundamental)</div>
+                                <div class="instrument">Bass Guitar (lowest notes)</div>
+                                <div class="instrument">Synth Bass</div>
+                                <div class="instrument">Pipe Organ</div>
+                                <div class="instrument">Thunder/Rumble</div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Bass -->
+                    <div class="frequency-band bass">
+                        <div class="band-fill" style="height: 85%;"></div>
+                        <div class="band-content">
+                            <div class="band-header">
+                                <div class="band-name">Bass</div>
+                                <div class="band-range">60-250 Hz</div>
+                            </div>
+                            <div class="instruments">
+                                <div class="instrument">Kick Drum (body)</div>
+                                <div class="instrument">Bass Guitar (body)</div>
+                                <div class="instrument">Toms</div>
+                                <div class="instrument">Cello</div>
+                                <div class="instrument">Trombone</div>
+                                <div class="instrument">Male Vocals (chest)</div>
+                                <div class="instrument">Piano (low end)</div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Low Mids -->
+                    <div class="frequency-band low-mids">
+                        <div class="band-fill" style="height: 75%;"></div>
+                        <div class="band-content">
+                            <div class="band-header">
+                                <div class="band-name">Low Mids</div>
+                                <div class="band-range">250-500 Hz</div>
+                            </div>
+                            <div class="instruments">
+                                <div class="instrument">Snare (body)</div>
+                                <div class="instrument">Guitar (warmth)</div>
+                                <div class="instrument">Vocals (warmth)</div>
+                                <div class="instrument">French Horn</div>
+                                <div class="instrument">Saxophone</div>
+                                <div class="instrument">Piano (lower mids)</div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Mids -->
+                    <div class="frequency-band mids">
+                        <div class="band-fill" style="height: 88%;"></div>
+                        <div class="band-content">
+                            <div class="band-header">
+                                <div class="band-name">Mids</div>
+                                <div class="band-range">500 Hz-2 kHz</div>
+                            </div>
+                            <div class="instruments">
+                                <div class="instrument">Vocals (body)</div>
+                                <div class="instrument">Electric Guitar</div>
+                                <div class="instrument">Acoustic Guitar</div>
+                                <div class="instrument">Piano (mids)</div>
+                                <div class="instrument">Snare (crack)</div>
+                                <div class="instrument">Trumpet</div>
+                                <div class="instrument">Violin</div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- High Mids -->
+                    <div class="frequency-band high-mids">
+                        <div class="band-fill" style="height: 82%;"></div>
+                        <div class="band-content">
+                            <div class="band-header">
+                                <div class="band-name">High Mids</div>
+                                <div class="band-range">2-4 kHz</div>
+                            </div>
+                            <div class="instruments">
+                                <div class="instrument">Vocals (presence)</div>
+                                <div class="instrument">Snare (attack)</div>
+                                <div class="instrument">Guitar (cut)</div>
+                                <div class="instrument">Piano (attack)</div>
+                                <div class="instrument">Strings (clarity)</div>
+                                <div class="instrument">Brass (edge)</div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Presence -->
+                    <div class="frequency-band presence">
+                        <div class="band-fill" style="height: 78%;"></div>
+                        <div class="band-content">
+                            <div class="band-header">
+                                <div class="band-name">Presence</div>
+                                <div class="band-range">4-8 kHz</div>
+                            </div>
+                            <div class="instruments">
+                                <div class="instrument">Vocals (clarity)</div>
+                                <div class="instrument">Cymbals</div>
+                                <div class="instrument">Hi-Hat</div>
+                                <div class="instrument">Strings (bite)</div>
+                                <div class="instrument">Acoustic Guitar (pick)</div>
+                                <div class="instrument">Flute</div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Brilliance -->
+                    <div class="frequency-band brilliance">
+                        <div class="band-fill" style="height: 72%;"></div>
+                        <div class="band-content">
+                            <div class="band-header">
+                                <div class="band-name">Brilliance</div>
+                                <div class="band-range">8-20 kHz</div>
+                            </div>
+                            <div class="instruments">
+                                <div class="instrument">Cymbals (shimmer)</div>
+                                <div class="instrument">Hi-Hat (sizzle)</div>
+                                <div class="instrument">Vocals (air)</div>
+                                <div class="instrument">Acoustic Guitar (sparkle)</div>
+                                <div class="instrument">Strings (shimmer)</div>
+                                <div class="instrument">Synthesizers (air)</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="frequency-axis">
+                    <div class="freq-marker">20 Hz</div>
+                    <div class="freq-marker">60 Hz</div>
+                    <div class="freq-marker">250 Hz</div>
+                    <div class="freq-marker">500 Hz</div>
+                    <div class="freq-marker">2 kHz</div>
+                    <div class="freq-marker">4 kHz</div>
+                    <div class="freq-marker">8 kHz</div>
+                    <div class="freq-marker">20 kHz</div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="legend">
+            <h2>Frequency Range Characteristics</h2>
+            <div class="legend-grid">
+                <div class="legend-item">
+                    <div class="legend-color" style="background: linear-gradient(135deg, #8b5cf6 0%, #4a0e4e 100%);"></div>
+                    <div class="legend-text">
+                        <h3>Sub-Bass (20-60 Hz)</h3>
+                        <p>Power and rumble. Felt more than heard. Too much = muddy mix. Cut here to clean up the low end.</p>
+                    </div>
+                </div>
+                <div class="legend-item">
+                    <div class="legend-color" style="background: linear-gradient(135deg, #3b82f6 0%, #1e3a8a 100%);"></div>
+                    <div class="legend-text">
+                        <h3>Bass (60-250 Hz)</h3>
+                        <p>Warmth and fullness. Foundation of the mix. Too much = boomy, not enough = thin.</p>
+                    </div>
+                </div>
+                <div class="legend-item">
+                    <div class="legend-color" style="background: linear-gradient(135deg, #10b981 0%, #15803d 100%);"></div>
+                    <div class="legend-text">
+                        <h3>Low Mids (250-500 Hz)</h3>
+                        <p>Body and warmth. Can sound muddy if too much. Often cut to add clarity.</p>
+                    </div>
+                </div>
+                <div class="legend-item">
+                    <div class="legend-color" style="background: linear-gradient(135deg, #f59e0b 0%, #ca8a04 100%);"></div>
+                    <div class="legend-text">
+                        <h3>Mids (500 Hz-2 kHz)</h3>
+                        <p>Core of most instruments. Too much = boxy/nasal. Essential for vocal intelligibility.</p>
+                    </div>
+                </div>
+                <div class="legend-item">
+                    <div class="legend-color" style="background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);"></div>
+                    <div class="legend-text">
+                        <h3>High Mids (2-4 kHz)</h3>
+                        <p>Presence and definition. Boost for clarity, cut if harsh or aggressive.</p>
+                    </div>
+                </div>
+                <div class="legend-item">
+                    <div class="legend-color" style="background: linear-gradient(135deg, #f97316 0%, #ea580c 100%);"></div>
+                    <div class="legend-text">
+                        <h3>Presence (4-8 kHz)</h3>
+                        <p>Clarity and attack. Makes vocals cut through. Too much = sibilance and fatigue.</p>
+                    </div>
+                </div>
+                <div class="legend-item">
+                    <div class="legend-color" style="background: linear-gradient(135deg, #ec4899 0%, #db2777 100%);"></div>
+                    <div class="legend-text">
+                        <h3>Brilliance (8-20 kHz)</h3>
+                        <p>Air and sparkle. Adds shine and openness. Too much = harsh and brittle.</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="tips">
+            <h2>Mixing Tips for Students</h2>
+            <ul>
+                <li>Start with subtractive EQ (cutting) before additive EQ (boosting)</li>
+                <li>Use high-pass filters to remove unnecessary low frequencies from non-bass instruments</li>
+                <li>Cut narrow, boost wide - surgical cuts for problems, gentle boosts for enhancement</li>
+                <li>Solo to find problem frequencies, but make final decisions in context with the full mix</li>
+                <li>Each instrument doesn't need to occupy the full frequency spectrum</li>
+                <li>Create space by carving out frequencies for different instruments</li>
+                <li>Be careful with 2-4 kHz - this is where ear fatigue happens</li>
+                <li>Less is more - subtle changes often work better than dramatic ones</li>
+                <li>Always A/B compare your changes with the original</li>
+                <li>Take breaks - your ears get tired and need rest for accurate decisions</li>
+            </ul>
+        </div>
+    </div>
+</body>
+</html>
